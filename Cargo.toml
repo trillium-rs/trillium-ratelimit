@@ -1,0 +1,32 @@
+[package]
+name = "trillium-ratelimit"
+version = "0.0.0"
+edition = "2024"
+description = "rate-limiting handler and RateLimit header types for trillium.rs"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/trillium-rs/trillium-ratelimit"
+readme = "README.md"
+keywords = ["trillium", "ratelimit", "throttle", "quota", "http"]
+categories = ["web-programming::http-server"]
+
+[package.metadata.cargo-udeps.ignore]
+development = ["trillium-ratelimit"]
+
+[package.metadata.docs.rs]
+all-features = true
+
+[features]
+default = ["limiter"]
+# The in-memory, moka-backed `RateLimiter` handler. Turn this off (`default-features = false`)
+# to depend only on the dependency-light `RateLimit` / `RateLimit-Policy` header types.
+limiter = ["dep:moka"]
+
+[dependencies]
+trillium = "1"
+sfparse = "0.1.1"
+moka = { version = "0.12.15", features = ["sync"], optional = true }
+
+[dev-dependencies]
+trillium-ratelimit = { path = ".", features = ["limiter"] }
+trillium-testing = "0.10"
+trillium-smol = "0.6.1"
