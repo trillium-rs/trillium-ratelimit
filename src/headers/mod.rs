@@ -1,9 +1,13 @@
-//! Parse-and-format types for the IETF `RateLimit` / `RateLimit-Policy` HTTP header fields.
+//! Parse-and-format types for the IETF [RateLimit header fields draft][draft]'s `RateLimit` and
+//! `RateLimit-Policy` HTTP fields, which are [RFC 9651] Structured Field Lists.
 //!
-//! These mirror the house style of trillium-forwarding's `Forwarded`: borrowed types over the
-//! header bytes, with `from_headers` / `parse` / `Display` / `into_owned`. They carry no
-//! dependency on the limiter handler, so a rate-limit-aware client can parse them without pulling
-//! in the moka-backed machinery.
+//! [`RateLimit`] and [`RateLimitPolicy`] are borrowed types over the header bytes, exposing
+//! `from_headers` / `parse_list` / [`Display`](std::fmt::Display) / `into_owned`. They are
+//! dependency-light and available without the `limiter` feature, so a rate-limit-aware client can
+//! parse what a server sends.
+//!
+//! [draft]: https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/
+//! [RFC 9651]: https://www.rfc-editor.org/rfc/rfc9651
 
 mod quota;
 mod rate_limit;

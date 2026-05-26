@@ -1,18 +1,26 @@
 //! Rate limiting for the [Trillium](https://trillium.rs) web framework.
 //!
-//! This crate has two layers that share one vocabulary, drawn from the IETF
-//! `RateLimit` header fields draft:
+//! Two layers share one vocabulary, taken from the IETF [RateLimit header fields draft][draft]:
 //!
-//! - **Header types** — parse-and-format types for the `RateLimit` and `RateLimit-Policy`
-//!   HTTP fields. These carry no heavy dependencies and are useful on their own: a server
-//!   that rolls its own limiter can format them, and a rate-limit-aware client retry handler
-//!   can parse them. Always available.
-//! - **The limiter** — a trillium `Handler` that meters requests per partition key against a
-//!   quota, backed by an in-memory store. Behind the default `limiter` feature; disable
-//!   default features to depend only on the header types.
+//! - **The limiter** — a token-bucket `RateLimiter` handler that meters requests per partition
+//!   key against a [`Quota`], halting over-quota requests and advertising `RateLimit` /
+//!   `RateLimit-Policy` / `Retry-After` on metered responses. Behind the default `limiter`
+//!   feature.
+//! - **Header types** — [`RateLimit`] and [`RateLimitPolicy`] parse and format the corresponding
+//!   HTTP fields. They are dependency-light and available without the `limiter` feature, so a
+//!   rate-limit-aware client can parse what a server sends.
 //!
-//! See `PLAN.md` in the repository for the v1 design and roadmap. The public API is still
-//! being built out.
+//! ```
+//! use trillium_ratelimit::{Quota, RateLimiter};
+//!
+//! // 60 requests/minute, keyed on the client's network.
+//! let app = (
+//!     RateLimiter::by_network(Quota::per_minute(60)),
+//!     |conn: trillium::Conn| async move { conn.ok("hello") },
+//! );
+//! ```
+//!
+//! [draft]: https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/
 #![forbid(unsafe_code)]
 #![deny(
     clippy::dbg_macro,
@@ -32,3 +40,13 @@ pub mod headers;
 
 #[doc(inline)]
 pub use headers::{ParseError, Quota, QuotaUnit, RateLimit, RateLimitPolicy};
+
+#[cfg(feature = "limiter")]
+mod bucket;
+#[cfg(feature = "limiter")]
+mod limiter;
+#[cfg(feature = "limiter")]
+mod store;
+
+#[cfg(feature = "limiter")]
+pub use limiter::{MissingKey, RateLimiter};

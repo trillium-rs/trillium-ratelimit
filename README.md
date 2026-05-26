@@ -1,4 +1,4 @@
-# trillium-ratelimit
+# 🚦 trillium-ratelimit — rate limiting and RateLimit header types
 
 [![ci][ci-badge]][ci]
 [![crates.io version][version-badge]][crate]
@@ -14,17 +14,34 @@
 [codecov-badge]: https://codecov.io/gh/trillium-rs/trillium-ratelimit/graph/badge.svg
 [codecov]: https://codecov.io/gh/trillium-rs/trillium-ratelimit
 
-Rate limiting for the [Trillium](https://trillium.rs) web framework: a handler that meters
-requests per partition key against a quota, plus standalone parse-and-format types for the
-IETF `RateLimit` / `RateLimit-Policy` HTTP header fields. The header types carry no heavy
-dependencies and are usable without the limiter — for example, by a rate-limit-aware client
-retry handler.
+Rate limiting for the [Trillium](https://trillium.rs) web framework: a token-bucket handler
+that meters requests per partition key against a quota, plus standalone parse-and-format types
+for the IETF `RateLimit` / `RateLimit-Policy` HTTP header fields.
+
+The handler guards expensive or unauthenticated endpoints and enforces per-principal quotas; it
+advertises `RateLimit` / `RateLimit-Policy` / `Retry-After` on every metered response. The
+header types are dependency-light and usable on their own — disable default features to depend
+only on them, as a rate-limit-aware client would to parse what a server sends.
 
 ## Example
 
 ```rust
-// Replace with a real example once the public API lands.
+use trillium_ratelimit::{Quota, RateLimiter};
+
+// 60 requests/minute, keyed on the client's network — a guard for an unauthenticated endpoint.
+let app = (
+    RateLimiter::by_network(Quota::per_minute(60)),
+    |conn: trillium::Conn| async move { conn.ok("hello") },
+);
+
+// run with your chosen runtime adapter, e.g.:
+// trillium_tokio::run(app);
 ```
+
+Stack several limiters to enforce overlapping scopes — each appends its own item to the
+response headers. Key on a value an upstream handler placed in state (an authenticated user or
+API-key id) by passing a closure to `RateLimiter::new`, or use `RateLimiter::from_state` when
+the state value is itself the key.
 
 ## Safety
 

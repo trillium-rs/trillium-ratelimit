@@ -9,20 +9,18 @@ use trillium::Headers;
 
 const POLICY_HEADER: &str = "RateLimit-Policy";
 
-/// A single quota policy from the `RateLimit-Policy` header field — one item of its Structured
-/// Field List ([RFC 9651]), per the [RateLimit header fields draft][draft] §3.
+/// A single quota policy — one item of the `RateLimit-Policy` header field's Structured Field
+/// List.
 ///
 /// A policy advertises a server's standing quota allocation: a required quota `q`, an optional
 /// time window `w`, an optional [`QuotaUnit`] `qu` (defaulting to requests), and an optional
-/// partition key `pk`. Unlike the limiter that produces them, this type is deliberately
-/// unopinionated — it represents the full expressive range of the spec, including windowless and
-/// non-request-unit policies it could never itself enforce.
+/// partition key `pk`. The type is deliberately unopinionated — it represents the full range the
+/// field can express, including windowless and non-request-unit policies the limiter in this
+/// crate could never itself enforce.
 ///
 /// Parse the full header (lists may span multiple field lines) with [`from_headers`] or a single
 /// field value with [`parse_list`]; format one policy via its [`Display`] impl.
 ///
-/// [RFC 9651]: https://www.rfc-editor.org/rfc/rfc9651
-/// [draft]: https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/
 /// [`from_headers`]: RateLimitPolicy::from_headers
 /// [`parse_list`]: RateLimitPolicy::parse_list
 #[derive(Debug, Clone, PartialEq, Eq)]

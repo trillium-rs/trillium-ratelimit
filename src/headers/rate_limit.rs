@@ -9,20 +9,17 @@ use trillium::Headers;
 
 const RATE_LIMIT_HEADER: &str = "RateLimit";
 
-/// A single service limit from the `RateLimit` header field — one item of its Structured Field
-/// List ([RFC 9651]), per the [RateLimit header fields draft][draft] §4.
+/// A single service limit — one item of the `RateLimit` header field's Structured Field List.
 ///
 /// Where [`RateLimitPolicy`] advertises a server's *standing* allocation, `RateLimit` reports the
 /// *current* state for a particular partition: the available quota `r` (remaining, required), an
-/// optional effective window `t` (the [`reset`] delay, in seconds, the RFC deliberately expresses
-/// as a delay rather than a timestamp to avoid clock-sync issues), and an optional partition key
-/// `pk`. The `name` ties it to the [`RateLimitPolicy`] of the same name.
+/// optional effective window `t` (the [`reset`] delay until quota replenishes, in seconds, rather
+/// than an absolute timestamp), and an optional partition key `pk`. The `name` ties it to the
+/// [`RateLimitPolicy`] of the same name.
 ///
-/// Like [`RateLimitPolicy`], this type is unopinionated and represents the full range of the spec.
-/// Parse with [`from_headers`] / [`parse_list`]; format one item via [`Display`].
+/// Like [`RateLimitPolicy`], this type is unopinionated and represents the full range the field
+/// can express. Parse with [`from_headers`] / [`parse_list`]; format one item via [`Display`].
 ///
-/// [RFC 9651]: https://www.rfc-editor.org/rfc/rfc9651
-/// [draft]: https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/
 /// [`RateLimitPolicy`]: crate::headers::RateLimitPolicy
 /// [`reset`]: RateLimit::reset
 /// [`from_headers`]: RateLimit::from_headers
@@ -71,7 +68,7 @@ impl<'a> RateLimit<'a> {
     }
 
     /// The effective window — the delay until quota is replenished (the `t` parameter), if
-    /// advertised. Expressed as a delay rather than an absolute time per §4.1.2.
+    /// advertised.
     pub fn reset(&self) -> Option<Duration> {
         self.reset
     }

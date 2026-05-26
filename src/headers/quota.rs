@@ -82,8 +82,8 @@ impl Quota {
 
 /// The unit a [`Quota`] is measured in — the `RateLimit-Policy` `qu` parameter.
 ///
-/// The v1 limiter only enforces [`QuotaUnit::Requests`]. The other variants exist so the header
-/// types can faithfully represent and round-trip policies advertised by other servers.
+/// The limiter enforces only [`QuotaUnit::Requests`]. The other variants exist so the header types
+/// can faithfully represent and round-trip policies advertised by other servers.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[non_exhaustive]
 pub enum QuotaUnit<'a> {
