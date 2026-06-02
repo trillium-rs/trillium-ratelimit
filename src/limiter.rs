@@ -149,7 +149,10 @@ where
     /// client; render only request-derived, non-sensitive bytes (a hashed or opaque form of the
     /// key rather than a raw user id). The key is only emitted when the request actually carries
     /// one — a [`MissingKey::Shared`] keyless request advertises no `pk`.
-    pub fn with_partition_key(mut self, render: impl Fn(&K) -> Vec<u8> + Send + Sync + 'static) -> Self {
+    pub fn with_partition_key(
+        mut self,
+        render: impl Fn(&K) -> Vec<u8> + Send + Sync + 'static,
+    ) -> Self {
         self.partition_key = Some(Box::new(render));
         self
     }
@@ -220,8 +223,9 @@ where
 
         let mut policy = RateLimitPolicy::new(self.policy_name.as_str(), self.quota.count())
             .with_window(self.quota.window());
-        let mut limit = RateLimit::new(self.policy_name.as_str(), decision.remaining)
-            .with_reset(Duration::from_secs(secs_ceil(decision.time_to_full + jitter)));
+        let mut limit = RateLimit::new(self.policy_name.as_str(), decision.remaining).with_reset(
+            Duration::from_secs(secs_ceil(decision.time_to_full + jitter)),
+        );
         if let Some(pk) = &pk {
             policy = policy.with_partition_key(pk.clone());
             limit = limit.with_partition_key(pk.clone());
@@ -276,8 +280,7 @@ mod tests {
 
     #[test(harness)]
     async fn allows_and_advertises_within_quota() {
-        let app =
-            TestServer::new((RateLimiter::new(Quota::per_minute(5), keyed()), "ok")).await;
+        let app = TestServer::new((RateLimiter::new(Quota::per_minute(5), keyed()), "ok")).await;
 
         let conn = app.get("/").await;
         conn.assert_status(Status::Ok);
@@ -290,8 +293,7 @@ mod tests {
 
     #[test(harness)]
     async fn denies_over_quota_with_retry_after() {
-        let app =
-            TestServer::new((RateLimiter::new(Quota::per_minute(1), keyed()), "ok")).await;
+        let app = TestServer::new((RateLimiter::new(Quota::per_minute(1), keyed()), "ok")).await;
 
         app.get("/").await.assert_status(Status::Ok);
 
@@ -302,8 +304,7 @@ mod tests {
 
     #[test(harness)]
     async fn skip_passes_keyless_through_unmetered() {
-        let app =
-            TestServer::new((RateLimiter::new(Quota::per_minute(1), keyless()), "ok")).await;
+        let app = TestServer::new((RateLimiter::new(Quota::per_minute(1), keyless()), "ok")).await;
 
         // Default MissingKey::Skip: every keyless request passes, with no rate-limit headers.
         for _ in 0..3 {
@@ -363,11 +364,17 @@ mod tests {
         ))
         .await;
         metered.get("/").await.assert_status(Status::Ok);
-        metered.get("/").await.assert_status(Status::TooManyRequests);
+        metered
+            .get("/")
+            .await
+            .assert_status(Status::TooManyRequests);
 
         // With no such state value, the request carries no key, so MissingKey::Skip passes it.
-        let keyless =
-            TestServer::new((RateLimiter::<UserId>::from_state(Quota::per_minute(1)), "ok")).await;
+        let keyless = TestServer::new((
+            RateLimiter::<UserId>::from_state(Quota::per_minute(1)),
+            "ok",
+        ))
+        .await;
         keyless.get("/").await.assert_status(Status::Ok);
         keyless.get("/").await.assert_status(Status::Ok);
     }
@@ -404,8 +411,12 @@ mod tests {
         assert_eq!(network_key(v4), v4);
 
         // Two IPv6 addresses sharing a /64 collapse to the same key; a different /64 does not.
-        let a = "2001:db8:1:2:aaaa:bbbb:cccc:dddd".parse::<Ipv6Addr>().unwrap();
-        let b = "2001:db8:1:2:1111:2222:3333:4444".parse::<Ipv6Addr>().unwrap();
+        let a = "2001:db8:1:2:aaaa:bbbb:cccc:dddd"
+            .parse::<Ipv6Addr>()
+            .unwrap();
+        let b = "2001:db8:1:2:1111:2222:3333:4444"
+            .parse::<Ipv6Addr>()
+            .unwrap();
         let c = "2001:db8:1:3::1".parse::<Ipv6Addr>().unwrap();
         assert_eq!(network_key(a.into()), network_key(b.into()));
         assert_ne!(network_key(a.into()), network_key(c.into()));
@@ -431,7 +442,10 @@ mod tests {
             let conn = app.get("/").await;
             conn.assert_status(Status::TooManyRequests);
             let retry: u64 = conn.header("Retry-After").unwrap().parse().unwrap();
-            assert!((60..=91).contains(&retry), "retry-after {retry} out of bounds");
+            assert!(
+                (60..=91).contains(&retry),
+                "retry-after {retry} out of bounds"
+            );
             seen.insert(retry);
         }
         assert!(seen.len() > 1, "jitter produced no spread: {seen:?}");

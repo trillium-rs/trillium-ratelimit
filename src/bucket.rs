@@ -42,7 +42,9 @@ impl Bucket {
         let rate = refill_per_second(quota);
         let burst = quota.burst() as f64;
 
-        let elapsed = now.saturating_duration_since(self.last_update).as_secs_f64();
+        let elapsed = now
+            .saturating_duration_since(self.last_update)
+            .as_secs_f64();
         self.tokens = (self.tokens + elapsed * rate).min(burst);
         self.last_update = now;
 
