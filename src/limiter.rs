@@ -189,13 +189,22 @@ impl RateLimiter<IpAddr> {
 }
 
 /// Reduces a peer IP to its network key: IPv4 unchanged (`/32`), IPv6 masked to its `/64` prefix.
+///
+/// An IPv4-mapped address (`::ffff:a.b.c.d`) keys as the IPv4 peer it is. A dual-stack listener —
+/// one bound to `::`, which is how a single socket serves both families — reports *every* IPv4
+/// connection that way, and the mapped form carries its address in the low 32 bits. Masking it as
+/// IPv6 would zero precisely the bits that distinguish one client from another, collapsing every
+/// IPv4 peer on the internet onto a single `::` partition to share one bucket.
 fn network_key(ip: IpAddr) -> IpAddr {
     match ip {
         IpAddr::V4(_) => ip,
-        IpAddr::V6(addr) => {
-            let [a, b, c, d, ..] = addr.segments();
-            IpAddr::V6(Ipv6Addr::new(a, b, c, d, 0, 0, 0, 0))
-        }
+        IpAddr::V6(addr) => match addr.to_ipv4_mapped() {
+            Some(v4) => IpAddr::V4(v4),
+            None => {
+                let [a, b, c, d, ..] = addr.segments();
+                IpAddr::V6(Ipv6Addr::new(a, b, c, d, 0, 0, 0, 0))
+            }
+        },
     }
 }
 
@@ -423,6 +432,32 @@ mod tests {
         assert_eq!(
             network_key(a.into()),
             IpAddr::V6(Ipv6Addr::new(0x2001, 0xdb8, 1, 2, 0, 0, 0, 0))
+        );
+    }
+
+    /// A dual-stack listener (bound to `::`) reports every IPv4 peer as an IPv4-mapped IPv6
+    /// address, whose distinguishing bits all live below the `/64` an IPv6 mask would keep. Keyed
+    /// as IPv6 they would all collapse onto `::` and meter against one shared bucket — so the whole
+    /// IPv4 internet, which is most real traffic, would throttle collectively.
+    #[test]
+    fn network_key_unmaps_ipv4_mapped_ipv6() {
+        use std::net::Ipv4Addr;
+
+        let mapped = "::ffff:198.51.100.1".parse::<IpAddr>().unwrap();
+        assert_eq!(
+            network_key(mapped),
+            IpAddr::V4(Ipv4Addr::new(198, 51, 100, 1))
+        );
+
+        // Distinct IPv4 peers keep distinct buckets when they arrive mapped...
+        let other = "::ffff:203.0.113.9".parse::<IpAddr>().unwrap();
+        assert_ne!(network_key(mapped), network_key(other));
+
+        // ...and a mapped peer keys identically to the same address arriving unmapped, so one
+        // client cannot double its quota by reaching the same server over both families.
+        assert_eq!(
+            network_key(mapped),
+            network_key(IpAddr::V4(Ipv4Addr::new(198, 51, 100, 1)))
         );
     }
 
