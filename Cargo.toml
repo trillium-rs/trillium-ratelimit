@@ -1,6 +1,6 @@
 [package]
 name = "trillium-ratelimit"
-version = "0.0.0"
+version = "0.0.1"
 edition = "2024"
 description = "rate-limiting handler and RateLimit header types for trillium.rs"
 license = "MIT OR Apache-2.0"
