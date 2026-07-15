@@ -1,13 +1,13 @@
 [package]
 name = "trillium-ratelimit"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2024"
 description = "rate-limiting handler and RateLimit header types for trillium.rs"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/trillium-rs/trillium-ratelimit"
 readme = "README.md"
 keywords = ["trillium", "ratelimit", "throttle", "quota", "http"]
-categories = ["web-programming::http-server"]
+categories = ["web-programming::http-server", "web-programming::http-client"]
 
 [package.metadata.cargo-udeps.ignore]
 development = ["trillium-ratelimit"]
@@ -20,15 +20,19 @@ default = ["limiter"]
 # The in-memory, moka-backed `RateLimiter` handler. Turn this off (`default-features = false`)
 # to depend only on the dependency-light `RateLimit` / `RateLimit-Policy` header types.
 limiter = ["dep:moka", "dep:base64", "dep:fastrand"]
+# The client-side `RateLimitClient` handler, a `trillium-client` middleware that paces outbound
+# requests to stay under a per-origin quota. Independent of `limiter`.
+client = ["dep:trillium-client"]
 
 [dependencies]
 trillium = "1"
 sfparse = "0.1.1"
 moka = { version = "0.12.15", features = ["sync"], optional = true }
 base64 = { version = "0.22.1", optional = true }
-fastrand = { version = "2.3.0", optional = true }
+fastrand = { version = "2.4.1", optional = true }
+trillium-client = { version = "0.9.12", optional = true }
 
 [dev-dependencies]
-trillium-ratelimit = { path = ".", features = ["limiter"] }
-trillium-testing = "0.10"
-trillium-smol = "0.6.1"
+trillium-ratelimit = { path = ".", features = ["limiter", "client"] }
+trillium-testing = { version = "0.10", features = ["smol"] }
+trillium-smol = "0.7.0"
