@@ -43,6 +43,27 @@ response headers. Key on a value an upstream handler placed in state (an authent
 API-key id) by passing a closure to `RateLimiter::new`, or use `RateLimiter::from_state` when
 the state value is itself the key.
 
+## Client-side throttling
+
+The `client` feature adds `client::Throttle`, the polite-guest dual: a
+[`trillium-client`](https://docs.rs/trillium-client) handler that paces *outbound* requests to
+stay under a per-origin quota, sleeping until each request's turn rather than rejecting. It suits
+talking to an API whose fixed request rate you must not exceed — advertised in `RateLimit` headers
+or not.
+
+```rust,no_run
+use trillium_client::Client;
+use trillium_ratelimit::{Quota, client::Throttle};
+use trillium_testing::client_config;
+
+// At most one request per second to any single origin.
+let client = Client::new(client_config()).with_handler(Throttle::new(Quota::per_second(1)));
+```
+
+Requests are metered per origin by default; group hosts with `with_scope`. A server that pushes
+back with `Retry-After` or an exhausted `RateLimit` header slows the affected scope further. Layer
+a retry or timeout handler on top if you want those — the throttle only paces.
+
 ## Safety
 
 This crate uses `#![forbid(unsafe_code)]`.

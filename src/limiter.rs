@@ -392,18 +392,24 @@ mod tests {
     async fn by_network_meters_per_peer_ip() {
         let app = TestServer::new((RateLimiter::by_network(Quota::per_minute(1)), "ok")).await;
 
+        // `connection: close` forces a fresh connection per request: the test transport binds the
+        // peer IP at connection time, so a pooled/reused connection would carry the previous peer's
+        // IP and defeat the per-peer distinction this test checks.
         app.get("/")
             .with_peer_ip([10, 0, 0, 1])
+            .with_request_header("connection", "close")
             .await
             .assert_status(Status::Ok);
         app.get("/")
             .with_peer_ip([10, 0, 0, 1])
+            .with_request_header("connection", "close")
             .await
             .assert_status(Status::TooManyRequests);
 
         // A different address has its own bucket.
         app.get("/")
             .with_peer_ip([10, 0, 0, 2])
+            .with_request_header("connection", "close")
             .await
             .assert_status(Status::Ok);
 
