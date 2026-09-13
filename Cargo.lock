@@ -1201,9 +1201,9 @@ dependencies = [
 
 [[package]]
 name = "sfparse"
-version = "0.1.1"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa43026ed1c44ad75582cfce650e384c3d57168e2aa03f3a826580cc2fa30bf5"
+checksum = "072f989a4ca54d5ac1a3ec58579412dc204185ead1396282759c8198734f86a1"
 
 [[package]]
 name = "sharded-slab"
